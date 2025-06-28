@@ -36,9 +36,8 @@ const moleculeTooltip = document.getElementById('molecule-tooltip');
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let hoveredMolecule = null;
-let cameraTarget; // Object for camera to look at
 
-// Data for example reactions
+// NEW: Data for example reactions
 const exampleReactions = [
     {
         category: "🧪 Phản ứng của axit - bazơ - muối",
@@ -84,7 +83,7 @@ const exampleReactions = [
             { name: "CH₂=CH₂ + Br₂ → CH₂Br–CH₂Br", input: "CH2=CH2 + Br2" },
             { name: "CH≡CH + H₂ → CH₂=CH₂", input: "CH=CH + H2" },
             { name: "C₂H₆ + O₂ → CO₂ + H₂O", input: "C2H6 + O2" },
-            { name: "CH₃COOH + 2O₂ → CO₂ + 2H₂O", input: "CH3COOH + O2" },
+            { name: "CH₃COOH + O₂ → CO₂ + 2H₂O", input: "CH3COOH + O2" },
         ]
     },
     {
@@ -133,10 +132,6 @@ function init3D() {
         directionalLight.name = "directionalLight";
         directionalLight.position.set(5, 10, 7.5);
         scene.add(directionalLight);
-        
-        // Camera target for dynamic lookAt
-        cameraTarget = new THREE.Object3D();
-        scene.add(cameraTarget);
 
         camera.position.z = 20; // Initial camera position, slightly further out
 
@@ -192,7 +187,6 @@ function init3D() {
         function animate() {
             requestAnimationFrame(animate);
             time += 0.05; // Increment time for vibration
-            controls.target.copy(cameraTarget.position); // Make controls orbit around the dynamic target
             controls.update();
 
             // Perpetual motion logic for "living" molecules
@@ -201,6 +195,7 @@ function init3D() {
                     const data = group.userData.moleculeData;
                     if (data && data.drift) { 
                         group.position.add(data.drift);
+
                         const wrapLimit = 22;
                         if (group.position.x > wrapLimit) group.position.x = -wrapLimit;
                         if (group.position.x < -wrapLimit) group.position.x = wrapLimit;
@@ -222,6 +217,7 @@ function init3D() {
                     }
                 });
             }
+
 
             if (particles && particles.visible) {
                 particles.rotation.y += 0.0005;
@@ -509,7 +505,7 @@ function runAnimation(plan) {
     clearScene();
     
     if (particles) {
-        particles.visible = true; 
+        particles.visible = true;
         const positions = particles.geometry.attributes.position.array;
         const originalPositions = particles.geometry.userData.originalPositions;
         for (let i = 0; i < originalPositions.length; i++) {
@@ -555,11 +551,9 @@ function runAnimation(plan) {
     plan.animationSteps.forEach((step, stepIndex) => {
         const stepTimeline = gsap.timeline();
         step.plan = plan;
-
         switch(step.type) {
             case 'move_to_center': {
                 const DURATION = step.duration;
-                stepTimeline.to(cameraTarget.position, { x: 0, y: 0, z: 0, duration: DURATION}, 0);
                 stepTimeline.to(camera.position, { z: 25, duration: DURATION, ease: "power2.inOut"}, 0);
                 
                 const ambientLight = scene.getObjectByName("ambientLight");
@@ -731,7 +725,6 @@ function runAnimation(plan) {
                 if(ambientLight) stepTimeline.to(ambientLight, { intensity: 0.5, duration: DURATION }, "breathing");
                 if(directionalLight) stepTimeline.to(directionalLight, { intensity: 1.0, duration: DURATION }, "breathing");
                 stepTimeline.to(camera.position, { z: 25, duration: DURATION }, "breathing");
-                stepTimeline.to(cameraTarget.position, {x:0, y:0, z:0, duration: DURATION}, "breathing");
                 break;
             }
             case 'gas_evolution':
